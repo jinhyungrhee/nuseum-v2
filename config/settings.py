@@ -120,10 +120,14 @@ JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME' : timedelta(hours=2),
-    'REFRESH_TOKEN_LIFETIME' : timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS' : False, # token 재발급 관련 설정
+    # 'ACCESS_TOKEN_LIFETIME' : timedelta(hours=2),
+    # 'REFRESH_TOKEN_LIFETIME' : timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=1),
+    'REFRESH_TOKEN_LIFETIME' : timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS' : False, # refresh token 재발급 X
+    # 'ROTATE_REFRESH_TOKENS' : True, # refresh token 재발급 O
     'BLACKLIST_AFTER_ROTATION' : True, # Blacklist 관련 설정
+    "TOKEN_REFRESH_SERIALIZER": "accounts.serializers.CustomTokenRefreshSerializer", # custom token refresh
 }
 
 # 쿠키 TEST

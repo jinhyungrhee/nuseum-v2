@@ -7,6 +7,9 @@ from rest_framework.response import Response
 # from dj_rest_auth import jwt_auth
 from dj_rest_auth.serializers import JWTSerializerWithExpiration, TokenSerializer
 from .serializers import CustomJWTSerializer
+from rest_framework_simplejwt.views import TokenViewBase
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from django.http import JsonResponse  
 
 class CustomLoginView(LoginView):
 
@@ -68,3 +71,31 @@ class CustomLoginView(LoginView):
             set_jwt_cookies(response, self.access_token, self.refresh_token)
             # custom_set_jwt_cookies(response, self.access_token, self.refresh_token)
         return response
+
+# TOKEN
+class CustomTokenRefreshView(TokenViewBase):
+    """
+    Takes a refresh type JSON web token and returns an access type JSON web
+    token if the refresh token is valid.
+    """
+
+    _serializer_class = settings.SIMPLE_JWT['TOKEN_REFRESH_SERIALIZER']
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+
+        response = JsonResponse(serializer.validated_data, status=200)
+        try:
+            response.set_cookie('my-app-auth', serializer.validated_data['access'],secure=True, httponly=True, samesite='None')
+        except KeyError:
+            pass
+
+        # return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return response
+
+# token_refresh = TokenRefreshView.as_view()

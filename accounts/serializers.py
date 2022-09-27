@@ -7,6 +7,13 @@ from dj_rest_auth.serializers import JWTSerializer
 from django.conf import settings
 from django.utils.module_loading import import_string
 from django.contrib.auth import get_user_model
+# TOKEN
+from rest_framework_simplejwt.tokens import RefreshToken
+import jwt
+from django.conf import settings
+from multiprocessing import AuthenticationError
+from datetime import datetime
+from django.http import JsonResponse  
 
 class CustomRegisterSerializer(RegisterSerializer):
 
@@ -91,3 +98,65 @@ class CustomJWTSerializer(JWTSerializer):
 
       user_data = JWTUserDetailsSerializer(obj['user'], context=self.context).data
       return user_data
+
+# TOKEN
+class CustomTokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    access = serializers.CharField(read_only=True)
+    token_class = RefreshToken
+
+    def validate(self, attrs):
+        # print(f"SELF : {self.context['request'].COOKIES.get('my-app-auth')}")
+        # print(f"ATTRS : {attrs}")
+        # 현재 저장된 access token expired time 확인
+        token = self.context['request'].COOKIES.get('my-app-auth')
+        refresh = self.token_class(attrs["refresh"])
+        if not token:
+            raise AuthenticationError('UnAuthenticated!')
+        try: # access 토큰 만료 X
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            access_token_expired_time = datetime.fromtimestamp(payload['exp'])
+            now = datetime.now()
+            # print(f"ACCESS_TOKEN_EXP_TIME : {access_token_expired_time}")
+            # print(f"NOW : {now}")
+            # 예외처리 : 비정상적인 처리
+            if now < access_token_expired_time:
+                # refresh 토큰 blacklist추가 == 강제 로그아웃
+                try:
+                    # Attempt to blacklist the given refresh token
+                    refresh.blacklist()
+                except AttributeError:
+                    # If blacklist app not installed, `blacklist` method will
+                    # not be present
+                    pass
+                data = {
+                    'err_msg' : '비정상적인 토큰 발급입니다. 강제 로그아웃 되었습니다.'
+                }
+                return data
+
+        except jwt.ExpiredSignatureError: # access 토큰 만료시 에러 발생
+            # 여기서 토큰 재발급?
+            # 만료 시간 이후에 발급받는 경우 : 정상적인 처리
+            data = {"access": str(refresh.access_token)}
+
+            if settings.SIMPLE_JWT['ROTATE_REFRESH_TOKENS']:
+                if settings.SIMPLE_JWT['BLACKLIST_AFTER_ROTATION']:
+                    try:
+                        # Attempt to blacklist the given refresh token
+                        refresh.blacklist()
+                    except AttributeError:
+                        # If blacklist app not installed, `blacklist` method will
+                        # not be present
+                        pass
+
+                refresh.set_jti()
+                refresh.set_exp()
+                refresh.set_iat()
+
+                data["refresh"] = str(refresh)
+ 
+                    
+            return data
+
+        
+        
