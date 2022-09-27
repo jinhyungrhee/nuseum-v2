@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FoodPost, FoodConsumption, FoodImage, SupplementPost, WaterPost
+from .models import FoodPost, FoodConsumption, FoodImage, SupplementPost, SupplementConsumption, WaterPost
 from django.conf import settings
 import base64
 import boto3
@@ -66,10 +66,51 @@ class FoodPostSerializer(serializers.ModelSerializer):
     return food_post # 여기서 에러나는듯 -> serializer 형식에 맞게 만들어서 보내줘야 할듯!!!
 
 # Supplement Seriaizers
+'''
 class SupplementSerializer(serializers.ModelSerializer):
   class Meta:
     model = SupplementPost
-    fields = '__all__' # edit시 프론트에서 image 필드는 입력받지 않도록 제한 필요! 
+    fields = '__all__' # edit시 프론트에서 image 필드는 입력받지 않도록 제한 필요!
+'''
+
+# Supplement 수정
+class SupplementConsumptionSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = SupplementConsumption
+    fields = '__all__'
+
+class SupplementPostSerializer(serializers.ModelSerializer):
+  consumptions = SupplementConsumptionSerializer(many=True)
+
+  class Meta:
+    model = SupplementPost
+    fields = ['id', 'type', 'created_at', 'updated_at', 'author', 'consumptions']
+
+  def create(self, validated_data):
+    consumptions_data = validated_data.pop('consumptions')
+    post = SupplementPost.objects.create(**validated_data)
+
+    supplement_consumption_list = []
+
+    for consumption_data in consumptions_data:
+      supplement_consumption = SupplementConsumption.objects.create(**consumption_data)
+      supplement_consumption.post = post
+      supplement_consumption.save()
+      supplement_consumption_list.append(supplement_consumption)
+
+    # print(f"IMG_LIST: {image_list}")
+    # print(f"FOOD_LIST: {food_list}")
+
+    supplement_post = {
+      'id' : post.id,
+      'type' : post.type,
+      'created_at' : post.created_at,
+      'updated_at' : post.updated_at,
+      'author' : post.author,
+      'consumptions' : supplement_consumption_list
+    }
+    return supplement_post # 여기서 에러나는듯 -> serializer 형식에 맞게 만들어서 보내줘야 할듯!!!
+
 
 # Water Serializers
 class WaterSerializer(serializers.ModelSerializer):

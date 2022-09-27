@@ -111,14 +111,14 @@ def create_image_url(image_string, post_id, date_data, username):
   header, data = image_string.split(';base64,')
   data_format, ext = header.split('/')
   try:
-    supplement_post = SupplementPost.objects.get(id=post_id)
+    # supplement_post = SupplementPost.objects.get(id=post_id)
     image_data = base64.b64decode(data) # 이미지 파일 생성
     s3r = boto3.resource('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID, aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
     key = "%s"%(f'{year}/{month}/{day}')
     s3r.Bucket(settings.AWS_STORAGE_BUCKET_NAME).put_object(Key=key+'/%s'%(f'{username}_supplement_{post_id}.{ext}'), Body=image_data, ContentType='jpg')
     aws_url = f'{settings.IMAGE_URL}/{year}/{month}/{day}/{username}_supplement_{post_id}.{ext}'
-    supplement_post.image = aws_url
-    supplement_post.save()
+    # supplement_post.image = aws_url
+    # supplement_post.save()
 
   except TypeError:
     data = {
@@ -126,8 +126,8 @@ def create_image_url(image_string, post_id, date_data, username):
     }
     return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
   
-
-  return supplement_post
+  return aws_url
+  # return supplement_post
 
 
 def delete_image(image_name):

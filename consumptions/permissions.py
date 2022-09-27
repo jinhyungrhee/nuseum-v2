@@ -18,7 +18,7 @@ class IsOwnerorAdmin(BasePermission):
     if type(obj) == FoodConsumption or type(obj) == FoodImage:
       return obj.post.author == request.user or request.user.is_superuser
     else:
-      return obj.author == request.user or request.user.is_superuser
+      return obj.post.author == request.user or request.user.is_superuser
 
     # print(type(obj) == FoodConsumption)
     '''

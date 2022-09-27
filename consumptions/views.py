@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveUpdateDestroyAPIView, RetrieveDestroyAPIView, RetrieveUpdateAPIView
 from rest_framework import status
-from .serializers import FoodPostSerializer, FoodConsumptionSerializer, FoodPostImageSerializer, SupplementSerializer, WaterSerializer, FoodAdminConsumptionSerializer, FoodAdminImageSerializer, ImageDecodeSerializer
-from .models import FoodPost, FoodImage, FoodConsumption, SupplementPost, WaterPost
+from .serializers import FoodPostSerializer, FoodConsumptionSerializer, FoodPostImageSerializer, SupplementPostSerializer, SupplementConsumptionSerializer ,WaterSerializer, FoodAdminConsumptionSerializer, FoodAdminImageSerializer, ImageDecodeSerializer
+from .models import FoodPost, FoodImage, FoodConsumption, SupplementPost, SupplementConsumption, WaterPost
 from datetime import datetime, timedelta
 from .permissions import IsOwnerorAdmin
 from .utils import convert_to_int_date, count_reporting_date, nutrient_calculator, create_image_url, delete_image
@@ -192,7 +192,9 @@ class FoodImageDeleteAPIView(RetrieveDestroyAPIView):
 # SUPPLEMENT CREATE
 class SupplementCreateAPIView(ListCreateAPIView):
   queryset = SupplementPost.objects.all()
-  serializer_class = SupplementSerializer
+  # serializer_class = SupplementSerializer
+  serializer_class = SupplementPostSerializer
+
 
   # GET : 날짜를 query parameter로 받아, 해당 날짜의 supplement 보여주는 api(GET)
   def get(self, request, *args, **kwargs):
@@ -209,39 +211,51 @@ class SupplementCreateAPIView(ListCreateAPIView):
         return self.list(request, supplement_queryset, *args, **kwargs)
 
   def list(self, request, supplement_queryset, *args, **kwargs):
-        if supplement_queryset == None:
+        print(supplement_queryset)
+        if not supplement_queryset.exists():
           # TEST VERSION (admin) 
-          queryset = self.filter_queryset(self.get_queryset()) 
+          # queryset = self.filter_queryset(self.get_queryset())
           # # DEPLOY VERSION (user)
-          # queryset = [] 
+          queryset = [] 
         else:
-          queryset = supplement_queryset
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+          # queryset = supplement_queryset
+          supplement_consumption_list = []
+          for i in range(len(supplement_queryset)):
+            food_serializer = SupplementConsumptionSerializer(instance=supplement_queryset[i].supplementconsumption_set.all(), many=True)
+            # print(f"CONSUMPTION : {food_serializer.data}")
+            supplement_consumption_list.extend(food_serializer.data)
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+          queryset = {
+            'type' : supplement_queryset[0].type,
+            'created_at' : supplement_queryset[0].created_at,
+            'updated_at' : supplement_queryset[0].updated_at,
+            'author' : supplement_queryset[0].author.username,
+            'consumptions' : supplement_consumption_list
+          }
+          print(queryset)
+        # page = self.paginate_queryset(queryset)
+        # if page is not None:
+        #     serializer = self.get_serializer(page, many=True)
+        #     return self.get_paginated_response(serializer.data)
+
+        # serializer = self.get_serializer(queryset, many=True)
+        # return Response(serializer.data)
+        return Response(data=queryset)
 
   # POST
   def create(self, request, *args, **kwargs):
         # 예외처리 : 이상한 값 입력 시 예외처리
         try:
           type = request.data['type']
-          name = request.data['name']
-          manufacturer = request.data['manufacturer']
-          image = request.data['image']
+          # name = request.data['name']
+          # manufacturer = request.data['manufacturer']
+          # image = request.data['image']
+          consumption_list = request.data['consumptions']
           created_at = request.data['created_at']
         except KeyError:
           data = {
-            'err_msg' : "입력한 JSON이 올바른 형태인지 확인해주세요 (fields: type, name, manufacturer, image, created_at(unix time))"
-          }
-          return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
-        # 예외처리 : 이름, 제조사 반드시 입력 필요!
-        if name == "" or manufacturer == "":
-          data = {
-            "err_msg" : "영양제 이름과 제조사명은 반드시 입력해야 합니다!" 
+            # 'err_msg' : "입력한 JSON이 올바른 형태인지 확인해주세요 (fields: type, name, manufacturer, image, created_at(unix time))"
+            'err_msg' : "입력한 JSON이 올바른 형태인지 확인해주세요 (fields: type, created_at(unix time), consumptions)"
           }
           return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
         # 예외처리 : type 확인
@@ -250,31 +264,59 @@ class SupplementCreateAPIView(ListCreateAPIView):
             "err_msg" : "type은 반드시 supplement이어야 합니다!" 
           }
           return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+        # 예외처리 : 이름, 제조사 반드시 입력 필요!
+        # if name == "" or manufacturer == "":
+        #   data = {
+        #     "err_msg" : "영양제 이름과 제조사명은 반드시 입력해야 합니다!" 
+        #   }
+        #   return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
         date_data = datetime.fromtimestamp(int(created_at)/1000)
+        
+        # base64 -> s3 url (일단 이미지 추출 후 빈 string으로 대체)
+        base64_list = []
+        for i in range(len(consumption_list)):
+          base64_list.append(consumption_list[i]['image'])
+          consumption_list[i]['image'] = ""
+          # SupplementConsumptionSerializer(data=consumption_list[i])
+
 
         data = {
           "type" : type,
           "created_at" : date_data,
-          "name" : name,
-          "manufacturer" : manufacturer,
-          "image" : "",
+          # "name" : name,
+          # "manufacturer" : manufacturer,
+          # "image" : "",
+          "consumptions" : consumption_list,
           "author" : self.request.user.id,
           # supplement 추가해야하나?
         }
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        # print(serializer.data)
-        image_url = create_image_url(image, serializer.data['id'], date_data, self.request.user.username)
-        # print(image_url)
-        serializer.data['image'] = image_url
+        # image_url = create_image_url(image, serializer.data['id'], date_data, self.request.user.username)
+        # serializer.data['image'] = image_url
+        # base64 -> s3 url
+        for i in range(len(base64_list)):
+          image_id = serializer.data['consumptions'][i]['id']
+          if base64_list[i] == "":
+            continue
+          image_url = create_image_url(base64_list[i], image_id, date_data, self.request.user.username)
+          supplement_consumption = SupplementConsumption.objects.get(id=image_id)
+          supplement_consumption.image = image_url
+          supplement_consumption.save()
+          serializer.data['consumptions'][i]['image'] = image_url
+
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 class SupplementUpdateAPIView(RetrieveUpdateDestroyAPIView):
-  queryset = SupplementPost.objects.all()
-  serializer_class = SupplementSerializer
+  # queryset = SupplementPost.objects.all()
+  # serializer_class = SupplementSerializer
+  # queryset = SupplementPost.objects.all()
+  # serializer_class = SupplementSerializer
+  queryset = SupplementConsumption.objects.all()
+  serializer_class = SupplementConsumptionSerializer
   # 주의 : 프론트에서 image 필드에 대한 접근은 못하도록 제어 필요!
   # 예외처리 : 작성글(pk)에는 본인만 접근 가능하도록 예외처리!
   def get_permissions(self):
@@ -288,7 +330,8 @@ class SupplementUpdateAPIView(RetrieveUpdateDestroyAPIView):
   def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         # s3 인스턴스 삭제
-        delete_image(instance.image)
+        if instance.image != "":
+          delete_image(instance.image)
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -479,7 +522,12 @@ class TodayView(APIView):
     }
 
     # supplement
-    supplement_data = list(SupplementPost.objects.filter(author=author, type='supplement', created_at=date_data).values())
+    # supplement_data = list(SupplementPost.objects.filter(author=author, type='supplement', created_at=date_data).values())
+    supplement_consumptions = []
+    supplement_post = SupplementPost.objects.filter(author=author, type='supplement', created_at=date_data)
+    for i in range(len(supplement_post)):
+      supplement_consumptions.extend(supplement_post[i].supplementconsumption_set.all().values())
+    # print(supplement_consumptions)
 
     # water
     water_data = WaterPost.objects.filter(author=author, type='water', created_at=date_data).values()
@@ -489,7 +537,8 @@ class TodayView(APIView):
       'lunch' : lunch_data,
       'dinner' : dinner_data,
       'snack' : snack_data,
-      'supplement' : supplement_data,
+      # 'supplement' : supplement_data,
+      'supplement' : supplement_consumptions,
       'water' : water_data
     }
     # print(today_data)
@@ -514,11 +563,11 @@ class DayNutrientView(APIView):
     # 아침/점심/저녁/간식 영양소
     # 여기에 걸려있는 consumption 객체 다 가져오기 
     food_posts = list(FoodPost.objects.filter(author=request.user, created_at=date).values('id'))
-    print(food_posts)
+    # print(food_posts)
     day_food_data = FoodConsumption.objects.none() # 빈 쿼리셋 생성
     for i in range(len(food_posts)):
       day_food_data |= FoodConsumption.objects.filter(post=food_posts[i]['id'])
-    print(f"DAY FOOD DATA : {day_food_data}")
+    # print(f"DAY FOOD DATA : {day_food_data}")
     # '''TEST''' => 계산하는 함수에서 이런식으로 계산하면 될 듯!
     '''
     for elem in day_food_data:
@@ -529,13 +578,17 @@ class DayNutrientView(APIView):
     # print(f"DAY WATER DATA : {day_water_data}") 
     # print(f"DAY WATER DATA : {day_water_data[0].amount}") # 없으면 Index Error 발생!
     # 영양제 정보 가져오기
-    day_supplement_data = SupplementPost.objects.filter(author=request.user, created_at=date)
-    # print(f"DAY SUPPLEMENT DATA : {day_supplement_data}")
-    # print(f"DAY SUPPLEMENT DATA : {day_supplement_data[0].name}") # 없으면 Index Error 발생!
+    supplement_posts = SupplementPost.objects.filter(author=request.user, created_at=date)
+    # 수정
+    day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(supplement_posts)):
+      day_supplement_data |= supplement_posts[i].supplementconsumption_set.all()
+    # log
+    # print(day_supplement_data)
 
     reporting_date = count_reporting_date(date, request.user, "day")
     sum_day_data = nutrient_calculator(day_food_data, day_supplement_data, day_water_data, reporting_date)
-    print(sum_day_data)
+    # print(sum_day_data)
     return Response(data=sum_day_data)
 
 
@@ -554,7 +607,15 @@ class WeekNutrientView(APIView):
     for i in range(len(week_food_posts)):
       week_food_data |= week_food_posts[i].foodconsumption_set.all()
     # print(week_food_data)
-    week_supplement_data = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    # week_supplement_data = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    # TODO : supplement 데이터 쿼리셋 만들어서 보내기
+    week_supplement_posts = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    week_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(week_supplement_posts)):
+      week_supplement_data |= week_supplement_posts[i].supplementconsumption_set.all()
+    # log
+    # print(week_supplement_data)
+
     week_water_data = WaterPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
     # print(week_food_data)
     # 기록 날짜 체크(today_date, author)
@@ -571,20 +632,28 @@ class MonthNutrientView(APIView):
     date = self.request.GET.get('date', None)
     today_date = datetime.fromtimestamp(int(date)/1000)
     a_week_ago = datetime.fromtimestamp((int(date) - 2592000000)/1000)
-    week_food_posts = FoodPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
-    week_food_data = FoodConsumption.objects.none() # 빈 쿼리셋
-    for i in range(len(week_food_posts)):
-      week_food_data |= week_food_posts[i].foodconsumption_set.all()
+    month_food_posts = FoodPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    month_food_data = FoodConsumption.objects.none() # 빈 쿼리셋
+    for i in range(len(month_food_posts)):
+      month_food_data |= month_food_posts[i].foodconsumption_set.all()
     # print(week_food_data)
-    week_supplement_data = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
-    week_water_data = WaterPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    # week_supplement_data = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    # TODO : supplement 데이터 쿼리셋 만들어서 보내기
+    month_supplement_posts = SupplementPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    month_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(month_supplement_posts)):
+      month_supplement_data |= month_supplement_posts[i].supplementconsumption_set.all()
+    # log
+    # print(month_supplement_data)
+
+    month_water_data = WaterPost.objects.filter(author=self.request.user, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
     # print(week_food_data)
     # 기록 날짜 체크(today_date, author)
     # decreasing_date = today_date
     reporting_date = count_reporting_date(today_date, request.user, "month")
-    sum_week_data = nutrient_calculator(week_food_data, week_supplement_data, week_water_data, reporting_date)
-    print(sum_week_data)
-    return Response(data=sum_week_data)
+    sum_month_data = nutrient_calculator(month_food_data, month_supplement_data, month_water_data, reporting_date)
+    # print(sum_month_data)
+    return Response(data=sum_month_data)
 
 # ADMIN : 관리자 페이지(사용자명을 입력하면 모든 정보 출력)
 class AdminView(APIView):
@@ -621,7 +690,7 @@ class AdminView(APIView):
       breakfast_image_serializer = FoodAdminImageSerializer(instance=breakfast_image, many=True)
       for elem in breakfast_image_serializer.data:
         formatted_elem = dict(elem)
-        print(elem['date'])
+        # print(elem['date'])
         formatted_date = str(elem['date']).split(' ')[0]
         # 새로운 날짜면 템플릿 데이터 생성
         if formatted_date not in admin_data.keys():
@@ -694,12 +763,19 @@ class AdminView(APIView):
           admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
         admin_data[f"{formatted_date}"]['snack']['image'].append(formatted_elem)
 
-      #=========================== SUPPLEMENT =========================================================
-      supplement_consumption = SupplementPost.objects.filter(author=user)
-      supplement_serializer = SupplementSerializer(instance=supplement_consumption, many=True)
+      #=========================== *SUPPLEMENT* =========================================================
+      # supplement_consumption = SupplementPost.objects.filter(author=user)
+      # supplement_serializer = SupplementSerializer(instance=supplement_consumption, many=True)
+      supplement_consumption = SupplementConsumption.objects.filter(post__author=user)
+      supplement_serializer = SupplementConsumptionSerializer(instance=supplement_consumption, many=True)
       for elem in supplement_serializer.data:
+        # print(elem)
+        post_created = SupplementPost.objects.get(id=elem['post']).created_at
+        # print(post_created)
+        # print(str(post_created).split(' ')[0])
         formatted_elem = dict(elem)
-        formatted_date = str(elem['created_at']).split('T')[0] # 얘는 왜 T? => serializer 차이?
+        # formatted_date = str(elem['created_at']).split('T')[0] # 얘는 왜 T? => serializer 차이?
+        formatted_date = str(post_created).split(' ')[0]
         # 새로운 날짜면 템플릿 데이터 생성
         if formatted_date not in admin_data.keys():
           admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
