@@ -110,9 +110,11 @@ class CustomTokenRefreshSerializer(serializers.Serializer):
         # print(f"ATTRS : {attrs}")
         # 현재 저장된 access token expired time 확인
         # print(self.context['request'].COOKIES.get('my-refresh-token'))
-        # print(self.context['request'].META['HTTP_Authorization'])
+        # print(self.context['request'].META['HTTP_AUTHORIZATION'].split(" ")[1])
         # token = self.context['request'].COOKIES.get('my-app-auth')
-        token = self.context['request'].META['HTTP_AUTHORIZATION']
+        # request header에서 access token 추출 (**Bearer parsing 필요!**)
+        # token = self.context['request'].META['HTTP_AUTHORIZATION']
+        token = self.context['request'].META['HTTP_AUTHORIZATION'].split(" ")[1]
         # refresh = self.token_class(attrs["refresh"])
         refresh = self.token_class(self.context['request'].COOKIES.get('my-refresh-token'))
         if not token:
