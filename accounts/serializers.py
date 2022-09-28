@@ -101,7 +101,7 @@ class CustomJWTSerializer(JWTSerializer):
 
 # TOKEN
 class CustomTokenRefreshSerializer(serializers.Serializer):
-    refresh = serializers.CharField()
+    refresh = serializers.CharField(read_only=True)
     access = serializers.CharField(read_only=True)
     token_class = RefreshToken
 
@@ -109,8 +109,12 @@ class CustomTokenRefreshSerializer(serializers.Serializer):
         # print(f"SELF : {self.context['request'].COOKIES.get('my-app-auth')}")
         # print(f"ATTRS : {attrs}")
         # 현재 저장된 access token expired time 확인
-        token = self.context['request'].COOKIES.get('my-app-auth')
-        refresh = self.token_class(attrs["refresh"])
+        # print(self.context['request'].COOKIES.get('my-refresh-token'))
+        # print(self.context['request'].META['HTTP_Authorization'])
+        # token = self.context['request'].COOKIES.get('my-app-auth')
+        token = self.context['request'].META['HTTP_AUTHORIZATION']
+        # refresh = self.token_class(attrs["refresh"])
+        refresh = self.token_class(self.context['request'].COOKIES.get('my-refresh-token'))
         if not token:
             raise AuthenticationError('UnAuthenticated!')
         try: # access 토큰 만료 X

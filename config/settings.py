@@ -114,7 +114,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # JWT
 
 REST_USE_JWT = True
-JWT_AUTH_COOKIE = 'my-app-auth'
+# JWT_AUTH_COOKIE = 'my-app-auth'
 JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'
 
 from datetime import timedelta

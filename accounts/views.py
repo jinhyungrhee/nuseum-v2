@@ -135,10 +135,10 @@ class CustomTokenRefreshView(TokenViewBase):
             raise InvalidToken(e.args[0])
 
         response = JsonResponse(serializer.validated_data, status=200)
-        try:
-            response.set_cookie('my-app-auth', serializer.validated_data['access'],secure=True, httponly=True, samesite='None')
-        except KeyError:
-            pass
+        # try:
+        #     response.set_cookie('my-app-auth', serializer.validated_data['access'],secure=True, httponly=True, samesite='None')
+        # except KeyError:
+        #     pass
 
         # return Response(serializer.validated_data, status=status.HTTP_200_OK)
         return response
