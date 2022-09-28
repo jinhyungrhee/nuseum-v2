@@ -5,7 +5,7 @@ from dj_rest_auth.views import (
     PasswordResetView, UserDetailsView,
 )
 from rest_framework_simplejwt.views import (
-    TokenRefreshView,
+    TokenRefreshView, TokenObtainPairView
 )
 
 urlpatterns = [
@@ -20,6 +20,7 @@ urlpatterns = [
   path('logout/', LogoutView.as_view(), name='rest_logout'),
   path('user/', UserDetailsView.as_view(), name='rest_user_details'),
   path('password/change/', PasswordChangeView.as_view(), name='rest_password_change'),
+  # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
   # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
   path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
   # 회원가입

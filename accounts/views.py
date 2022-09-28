@@ -133,6 +133,11 @@ class CustomTokenRefreshView(TokenViewBase):
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
             raise InvalidToken(e.args[0])
+        
+        # cookie에 refresh token이 삭제된 경우 예외처리 **
+        # print(f"RESULT : {serializer.validated_data}")
+        if 'err_code' in serializer.validated_data.keys():
+            return JsonResponse(serializer.validated_data, status=406)
 
         response = JsonResponse(serializer.validated_data, status=200)
         # try:

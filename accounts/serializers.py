@@ -105,6 +105,7 @@ class CustomTokenRefreshSerializer(serializers.Serializer):
     access = serializers.CharField(read_only=True)
     token_class = RefreshToken
 
+    # AssertionError: .validate() should return the validated data
     def validate(self, attrs):
         # print(f"SELF : {self.context['request'].COOKIES.get('my-app-auth')}")
         # print(f"ATTRS : {attrs}")
@@ -116,7 +117,17 @@ class CustomTokenRefreshSerializer(serializers.Serializer):
         # token = self.context['request'].META['HTTP_AUTHORIZATION']
         token = self.context['request'].META['HTTP_AUTHORIZATION'].split(" ")[1]
         # refresh = self.token_class(attrs["refresh"])
+        # print(self.context['request'].META)
+        # print(f"my-refresh-token : {self.context['request'].COOKIES.get('my-refresh-token')}")
+        # cookie에 refresh token이 삭제된 경우 예외처리**
+        if self.context['request'].COOKIES.get('my-refresh-token') == None:
+            data = {
+                'err_msg' : 'cookie에 refresh token이 없습니다.',
+                'err_code' : 'NOT_ACCEPTABLE'
+            }
+            return data
         refresh = self.token_class(self.context['request'].COOKIES.get('my-refresh-token'))
+        print(refresh)
         if not token:
             raise AuthenticationError('UnAuthenticated!')
         try: # access 토큰 만료 X
