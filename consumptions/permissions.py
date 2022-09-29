@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from consumptions.models import FoodConsumption, FoodImage
+from consumptions.models import FoodConsumption, FoodImage, SupplementConsumption
 
 MEAL_TYPE = ["breakfast", "lunch", "dinner", "snack"]
 
@@ -15,10 +15,10 @@ class IsOwner(BasePermission):
 class IsOwnerorAdmin(BasePermission):
 
   def has_object_permission(self, request, view, obj):
-    if type(obj) == FoodConsumption or type(obj) == FoodImage:
+    if type(obj) == FoodConsumption or type(obj) == FoodImage or type(obj) == SupplementConsumption:
       return obj.post.author == request.user or request.user.is_superuser
-    else:
-      return obj.post.author == request.user or request.user.is_superuser
+    else: # WaterPost
+      return obj.author == request.user or request.user.is_superuser
 
     # print(type(obj) == FoodConsumption)
     '''
