@@ -10,3 +10,7 @@ class NoticeSerializer(serializers.ModelSerializer):
   def create(self, validated_data):
     notice = Notice.objects.create(**validated_data)
     return notice
+
+class CustomNoticeSerializer(serializers.Serializer):
+  id = serializers.CharField()
+  clicked = serializers.IntegerField()
