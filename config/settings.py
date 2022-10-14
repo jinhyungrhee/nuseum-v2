@@ -24,31 +24,32 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
-# ========================== DEV VERSION ============================================
-# secret_file = os.path.join(BASE_DIR, 'secrets.json')
+# ========================== DEV VERSION(AWS) ============================================
+secret_file = os.path.join(BASE_DIR, 'secrets.json')
 
-# with open(secret_file) as f:
-#     secrets = json.loads(f.read())
+with open(secret_file) as f:
+    secrets = json.loads(f.read())
 
-# def get_secret(setting):
-#     try:
-#         return secrets[setting]
-#     except KeyError:
-#         error_msg = "Set the {} environment variable".format(setting)
-#         raise ImproperlyConfigured(error_msg)
+def get_secret(setting):
+    try:
+        return secrets[setting]
+    except KeyError:
+        error_msg = "Set the {} environment variable".format(setting)
+        raise ImproperlyConfigured(error_msg)
 
-# SECRET_KEY = get_secret("SECRET_KEY")
-# DEBUG = True
-# AWS_ACCESS_KEY_ID = get_secret("AWS_ACCESS_KEY_ID")
-# AWS_SECRET_ACCESS_KEY = get_secret("AWS_SECRET_ACCESS_KEY")
-
-# ========================= DEPLOY VERSION =============================================
-
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = get_secret("SECRET_KEY")
 # DEBUG = config('DEBUG', default=False, cast=bool)
-DEBUG = True # 일단 테스트
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+DEBUG = True
+AWS_ACCESS_KEY_ID = get_secret("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = get_secret("AWS_SECRET_ACCESS_KEY")
+
+# ========================= DEPLOY VERSION(HEROKU) =============================================
+
+# SECRET_KEY = config('SECRET_KEY')
+# # DEBUG = config('DEBUG', default=False, cast=bool)
+# DEBUG = True # 일단 테스트
+# AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+# AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 
 # ========================= AWS Settings ===============================================
 AWS_STORAGE_BUCKET_NAME = 'jinhyung.test.aws'
@@ -83,6 +84,7 @@ INSTALLED_APPS = [
     'dj_rest_auth.registration',
     'allauth',
     'allauth.account',
+    'allauth.socialaccount',
     'storages',
     'corsheaders',
     # my apps
@@ -90,6 +92,7 @@ INSTALLED_APPS = [
     'foods',
     'accounts',
     'qnas',
+    'notices',
 ]
 
 # rest_framework
@@ -114,15 +117,15 @@ AUTH_USER_MODEL = 'accounts.User'
 # JWT
 
 REST_USE_JWT = True
-# JWT_AUTH_COOKIE = 'my-app-auth'  # test
+JWT_AUTH_COOKIE = 'my-app-auth'  # test
 JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'
 
 from datetime import timedelta
 
 SIMPLE_JWT = {
     # deploy
-    'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=1),
-    'REFRESH_TOKEN_LIFETIME' : timedelta(minutes=5),
+    'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME' : timedelta(hours=1),
     # test
     # 'ACCESS_TOKEN_LIFETIME' : timedelta(minutes=2),
     # 'REFRESH_TOKEN_LIFETIME' : timedelta(minutes=1),
@@ -162,7 +165,8 @@ CORS_ORIGIN_WHITELIST = [
                         'http://127.0.0.1:3000',
                         'http://localhost:3000',
                         'https://dev.example.com:3000',
-                        'https://nuseum-fnqo.vercel.app']
+                        'https://nuseum-fnqo.vercel.app',
+                        'https://nuseum-admin.vercel.app']
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = "config.urls"
@@ -189,6 +193,25 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+# AWS DB SETTING
+# import pymysql
+# pymysql.install_as_MySQLdb()
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": "nuseum", 
+#         "USER": "jinhyung",
+#         "PASSWORD": get_secret("AWS_RDS_PASSWORD"),
+#         "HOST": "database-1.cbtkoz4oqhvu.ap-northeast-2.rds.amazonaws.com",
+#         "PORT": "3306",
+#         "OPTIONS": {
+#             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
+
+# HEROKU DB SETTING
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

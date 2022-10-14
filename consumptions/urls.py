@@ -23,7 +23,12 @@ urlpatterns = [
   path('week/', views.WeekNutrientView.as_view()),
   # month
   path('month/', views.MonthNutrientView.as_view()),
-  # admin
+  # admin - 유저리스트
   path('admin/', views.AdminView.as_view()),
-
+  # admin - 구간별 음식 합계
+  path('admin/sum/', views.AdminSumView.as_view()),
+  # admin - 식이분석(쿼리파라미터 : 유저명, 날짜)
+  path('admin/analysis/day/', views.AdminDayView().as_view()),
+  path('admin/analysis/week/', views.AdminWeekView().as_view()),
+  path('admin/analysis/month/', views.AdminMonthView().as_view()),
 ]

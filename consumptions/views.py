@@ -661,13 +661,14 @@ class AdminView(APIView):
   def get(self, request):
     author = request.GET.get('author', None)
     if author is None:
-      user_list = User.objects.filter(is_superuser=False)
+      user_list = User.objects.filter(is_superuser=False, is_staff=False)
       data = {
         'userList' : user_list
       }
       serializer = UserListSerializer(instance=data)
       return Response(data=serializer.data)
     else:
+      # DEPRECATED
       user = User.objects.get(username=author)
       admin_data = {}
       sample_data = {'breakfast' : {'image' : [], 'data' : []}, 'lunch' : {'image' : [], 'data' : []} , 'dinner' : {'image' : [], 'data' : []} , 'snack' : {'image' : [], 'data' : []}, 'supplement' : [], 'water' : 0 }
@@ -794,3 +795,237 @@ class AdminView(APIView):
       # 날짜 오름차순 정렬
       admin_data = dict(sorted(admin_data.items()))
       return Response(data=admin_data)
+
+# ADMIN VIEW를 DAY/WEEK/MONTH로 나눠서 보여주기
+class AdminSumView(APIView):
+  
+  def get(self, request):
+    author_string = self.request.GET.get('author', None)
+    author = User.objects.get(username=author_string)
+    date = self.request.GET.get('date', None)
+    sum_type = self.request.GET.get('type', None)
+    if sum_type == 'day':
+      start_date = datetime.fromtimestamp(int(date)/1000)
+    elif sum_type == 'week':
+      start_date = datetime.fromtimestamp((int(date) - 518400000)/1000)
+    elif sum_type == 'month':
+      start_date = datetime.fromtimestamp((int(date) - 2592000000)/1000)
+    
+    today_date = datetime.fromtimestamp(int(date)/1000)
+
+    user = User.objects.get(username=author)
+    admin_data = {}
+    sample_data = {'breakfast' : {'image' : [], 'data' : []}, 'lunch' : {'image' : [], 'data' : []} , 'dinner' : {'image' : [], 'data' : []} , 'snack' : {'image' : [], 'data' : []}, 'supplement' : [], 'water' : 0 }
+
+    breakfast_consumption = FoodConsumption.objects.filter(post__type="breakfast", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    breakfast_serializer = FoodAdminConsumptionSerializer(instance=breakfast_consumption, many=True) # join시 특정 필드만 가져오는 메서드?
+    for elem in breakfast_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+
+      # 새로운 날짜면 템플릿 데이터(sample_data) 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+        # admin_data[formatted_date] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['breakfast']['data'].append(formatted_elem)
+      # admin_data[formatted_date]['breakfast']['data'].append(formatted_elem)
+
+    breakfast_image = FoodImage.objects.filter(post__type="breakfast", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    breakfast_image_serializer = FoodAdminImageSerializer(instance=breakfast_image, many=True)
+    for elem in breakfast_image_serializer.data:
+      formatted_elem = dict(elem)
+      # print(elem['date'])
+      formatted_date = str(elem['date']).split(' ')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['breakfast']['image'].append(formatted_elem)
+
+    #=============================== LUNCH =======================================================
+    lunch_consumption = FoodConsumption.objects.filter(post__type="lunch", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    lunch_serializer = FoodAdminConsumptionSerializer(instance=lunch_consumption, many=True) # join시 특정 필드만 가져오는 메서드?
+    for elem in lunch_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      
+      # 새로운 날짜면 템플릿 데이터(sample_data) 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['lunch']['data'].append(formatted_elem)
+
+    lunch_image = FoodImage.objects.filter(post__type="lunch", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    lunch_image_serializer = FoodAdminImageSerializer(instance=lunch_image, many=True)
+    for elem in lunch_image_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['lunch']['image'].append(formatted_elem)
+
+    #=============================== DINNER =======================================================zz
+    dinner_consumption = FoodConsumption.objects.filter(post__type="dinner", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    dinner_serializer = FoodAdminConsumptionSerializer(instance=dinner_consumption, many=True) # join시 특정 필드만 가져오는 메서드?
+    for elem in dinner_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      
+      # 새로운 날짜면 템플릿 데이터(sample_data) 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['dinner']['data'].append(formatted_elem)
+
+    dinner_image = FoodImage.objects.filter(post__type="dinner", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    dinner_image_serializer = FoodAdminImageSerializer(instance=dinner_image, many=True)
+    for elem in dinner_image_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['dinner']['image'].append(formatted_elem)
+
+    #=============================== SNACK =========================================================
+    snack_consumption = FoodConsumption.objects.filter(post__type="snack", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    snack_serializer = FoodAdminConsumptionSerializer(instance=snack_consumption, many=True) # join시 특정 필드만 가져오는 메서드?
+    for elem in snack_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      
+      # 새로운 날짜면 템플릿 데이터(sample_data) 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['snack']['data'].append(formatted_elem)
+
+    snack_image = FoodImage.objects.filter(post__type="snack", post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    snack_image_serializer = FoodAdminImageSerializer(instance=snack_image, many=True)
+    for elem in snack_image_serializer.data:
+      formatted_elem = dict(elem)
+      formatted_date = str(elem['date']).split(' ')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['snack']['image'].append(formatted_elem)
+
+    #=========================== *SUPPLEMENT* =========================================================
+    # supplement_consumption = SupplementPost.objects.filter(author=user)
+    # supplement_serializer = SupplementSerializer(instance=supplement_consumption, many=True)
+    supplement_consumption = SupplementConsumption.objects.filter(post__author=user, post__created_at__lte=today_date, post__created_at__gte=start_date)
+    supplement_serializer = SupplementConsumptionSerializer(instance=supplement_consumption, many=True)
+    for elem in supplement_serializer.data:
+      # print(elem)
+      post_created = SupplementPost.objects.get(id=elem['post']).created_at
+      # print(post_created)
+      # print(str(post_created).split(' ')[0])
+      formatted_elem = dict(elem)
+      # formatted_date = str(elem['created_at']).split('T')[0] # 얘는 왜 T? => serializer 차이?
+      formatted_date = str(post_created).split(' ')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['supplement'].append(formatted_elem)
+
+    #=========================== WATER =========================================================
+    water_consumption = WaterPost.objects.filter(author=user, created_at__lte=today_date, created_at__gte=start_date)
+    water_serializer = WaterSerializer(instance=water_consumption, many=True)
+    for elem in water_serializer.data:
+      formatted_date = str(elem['created_at']).split('T')[0]
+      # 새로운 날짜면 템플릿 데이터 생성
+      if formatted_date not in admin_data.keys():
+        admin_data[f"{formatted_date}"] = copy.deepcopy(sample_data)
+      admin_data[f"{formatted_date}"]['water'] = elem['amount']
+
+    # 날짜 오름차순 정렬
+    admin_data = dict(sorted(admin_data.items()))
+    return Response(data=admin_data)
+
+
+
+# ADMIN DAY/WEEK/MONTH : 관리자 식이분석 페이지(사용자명과 날짜를 입력하면 일별/주별/월별 식이분석 결과 출력)
+class AdminDayView(APIView):
+
+  def get(self, request):
+    author_string = self.request.GET.get('author', None)
+    if author_string is None:
+      data = {
+        'error_msg' : '올바른 사용자 코드를 입력하세요.'
+      }
+      return Response(status=status.HTTP_404_NOT_FOUND, data=data)
+    author = User.objects.get(username=author_string)
+    # print(f"AUTHOR : {author}")
+
+    date = self.request.GET.get('date', None)
+    int_date = convert_to_int_date(date)
+    if int_date is None:
+      data = {
+        'error_msg' : '올바른 날짜를 입력하세요.'
+      }
+      return Response(status=status.HTTP_404_NOT_FOUND, data=data)
+
+    date = datetime.fromtimestamp(int_date/1000)
+    # 아침/점심/저녁/간식 영양소
+    food_posts = list(FoodPost.objects.filter(author=author, created_at=date).values('id'))
+    day_food_data = FoodConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(food_posts)):
+      day_food_data |= FoodConsumption.objects.filter(post=food_posts[i]['id'])
+    # 물 정보 가져오기
+    day_water_data = WaterPost.objects.filter(author=author, created_at=date)
+    # 영양제 정보 가져오기
+    supplement_posts = SupplementPost.objects.filter(author=author, created_at=date)
+    day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(supplement_posts)):
+      day_supplement_data |= supplement_posts[i].supplementconsumption_set.all()
+
+    reporting_date = count_reporting_date(date, author, "day")
+    sum_day_data = nutrient_calculator(day_food_data, day_supplement_data, day_water_data, reporting_date)
+    return Response(data=sum_day_data)
+
+class AdminWeekView(APIView):
+
+  def get(self, request):
+    author_string = self.request.GET.get('author', None)
+    author = User.objects.get(username=author_string)
+    date = self.request.GET.get('date', None)
+    today_date = datetime.fromtimestamp(int(date)/1000)
+    a_week_ago = datetime.fromtimestamp((int(date) - 518400000)/1000)
+    week_food_posts = FoodPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    week_food_data = FoodConsumption.objects.none() # 빈 쿼리셋
+    for i in range(len(week_food_posts)):
+      week_food_data |= week_food_posts[i].foodconsumption_set.all()
+    
+    week_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    week_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(week_supplement_posts)):
+      week_supplement_data |= week_supplement_posts[i].supplementconsumption_set.all()
+
+    week_water_data = WaterPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+
+    reporting_date = count_reporting_date(today_date, author, "week")
+    sum_week_data = nutrient_calculator(week_food_data, week_supplement_data, week_water_data, reporting_date)
+
+    return Response(data=sum_week_data)
+
+class AdminMonthView(APIView):
+
+  def get(self, request):
+    author_string = self.request.GET.get('author', None)
+    author = User.objects.get(username=author_string)
+    date = self.request.GET.get('date', None)
+    today_date = datetime.fromtimestamp(int(date)/1000)
+    a_week_ago = datetime.fromtimestamp((int(date) - 2592000000)/1000)
+    month_food_posts = FoodPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    month_food_data = FoodConsumption.objects.none() # 빈 쿼리셋
+    for i in range(len(month_food_posts)):
+      month_food_data |= month_food_posts[i].foodconsumption_set.all()
+    
+    month_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+    month_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+    for i in range(len(month_supplement_posts)):
+      month_supplement_data |= month_supplement_posts[i].supplementconsumption_set.all()
+
+    month_water_data = WaterPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+
+    reporting_date = count_reporting_date(today_date, author, "month")
+    sum_month_data = nutrient_calculator(month_food_data, month_supplement_data, month_water_data, reporting_date)
+
+    return Response(data=sum_month_data)
