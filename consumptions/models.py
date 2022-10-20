@@ -38,7 +38,8 @@ class FoodImage(models.Model):
 class FoodConsumption(models.Model):
   post = models.ForeignKey(FoodPost, on_delete=models.CASCADE, null=True, blank=True)
   food = models.ForeignKey(Food, on_delete=models.CASCADE, null=True, blank=True)
-  amount = models.IntegerField(default=0)
+  # amount = models.IntegerField(default=0)
+  amount = models.FloatField(default=0.0) # 변경 ** 
   def __str__(self):
     return f'[{self.pk}][pno.{self.post.id} - {self.post.author}] {self.food.name}, {self.amount} ({str(self.post.created_at).split()[0]} {self.post.type})'
     # return f'<{self.pk}>[post_no.{self.post.id}]{self.food.name}, {self.amount}'
