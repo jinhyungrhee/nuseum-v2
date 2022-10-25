@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'qnas',
     'notices',
     'recommendations',
+    'results',
 ]
 
 # rest_framework
@@ -264,3 +265,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import dj_database_url
 db_from_env = dj_database_url.config(conn_max_age=500)
 DATABASES['default'].update(db_from_env)
+
+# ======================= RESULT IMAGES ==========================================
+image_file = os.path.join(BASE_DIR, 'images.json')
+
+with open(image_file, 'r', encoding='utf-8') as f: # 주의) utf-8 변환 필요!
+    images = json.loads(f.read())
+
+def get_images(setting):
+    try:
+        return images[setting]
+    except KeyError:
+        error_msg = "Set the {} environment variable".format(setting)
+        raise ImproperlyConfigured(error_msg)

@@ -31,4 +31,5 @@ urlpatterns = [
   path('admin/analysis/day/', views.AdminDayView().as_view()),
   path('admin/analysis/week/', views.AdminWeekView().as_view()),
   path('admin/analysis/month/', views.AdminMonthView().as_view()),
+  # TODO : admin - 사용자별 식단 조회/입력/수정/삭제 
 ]
