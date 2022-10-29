@@ -7,8 +7,9 @@ from config.settings import get_images
 class TempExaminationResultView(APIView):
   def get(self, request):
     user = request.user.username
+    image_data = get_images(user)
     data = {
       'user' : user,
-      'data' : get_images(user)
+      'data' : image_data # get_images(user)
     }
     return Response(data=data)
