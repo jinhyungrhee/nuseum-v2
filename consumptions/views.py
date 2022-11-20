@@ -1088,5 +1088,65 @@ class AdminPostCreateView(CreateAPIView):
 
 
 # =================== SUPPLEMENT DB 객체로 추가하는 VIEW =============================================
-# class SupplementCreateDBAPIView(CreateAPIView):
-#   pass
+class SupplementCreateDBAPIView(CreateAPIView):
+  queryset = SupplementPost.objects.all()
+  serializer_class = SupplementPostSerializer
+
+  def create(self, request, *args, **kwargs):
+        # 예외처리 : 이상한 값 입력 시 예외처리
+        try:
+          type = request.data['type']
+          # name = request.data['name']
+          # manufacturer = request.data['manufacturer']
+          # image = request.data['image']
+          consumption_list = request.data['consumptions']
+          created_at = request.data['created_at']
+        except KeyError:
+          data = {
+            'err_msg' : "입력한 JSON이 올바른 형태인지 확인해주세요 (fields: type, created_at(unix time), consumptions)"
+          }
+          return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+        # 예외처리 : type 확인
+        if type != "supplement":
+          data = {
+            "err_msg" : "type은 반드시 supplement이어야 합니다!" 
+          }
+          return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+
+        date_data = datetime.fromtimestamp(int(created_at)/1000)
+        
+        # base64 -> s3 url (일단 이미지 추출 후 빈 string으로 대체)
+        # base64_list = []
+        # for i in range(len(consumption_list)):
+        #   base64_list.append(consumption_list[i]['image'])
+        #   consumption_list[i]['image'] = ""
+        #   # SupplementConsumptionSerializer(data=consumption_list[i])
+
+        data = {
+          "type" : type,
+          "created_at" : date_data,
+          # "name" : name,
+          # "manufacturer" : manufacturer,
+          # "image" : "",
+          "consumptions" : consumption_list,
+          "author" : self.request.user.id,
+          # supplement 추가해야하나?
+        }
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # image_url = create_image_url(image, serializer.data['id'], date_data, self.request.user.username)
+        # serializer.data['image'] = image_url
+        # # base64 -> s3 url
+        # for i in range(len(base64_list)):
+        #   image_id = serializer.data['consumptions'][i]['id']
+        #   if base64_list[i] == "":
+        #     continue
+        #   image_url = create_image_url(base64_list[i], image_id, date_data, self.request.user.username)
+        #   supplement_consumption = SupplementConsumption.objects.get(id=image_id)
+        #   supplement_consumption.image = image_url
+        #   supplement_consumption.save()
+        #   serializer.data['consumptions'][i]['image'] = image_url
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

@@ -168,7 +168,8 @@ CORS_ORIGIN_WHITELIST = [
                         'http://localhost:3000',
                         'https://dev.example.com:3000',
                         'https://nuseum-fnqo.vercel.app',
-                        'https://nuseum-admin.vercel.app']
+                        'https://nuseum-admin.vercel.app',
+                        'https://nuseum-git-test-parkjju.vercel.app']
 CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = "config.urls"

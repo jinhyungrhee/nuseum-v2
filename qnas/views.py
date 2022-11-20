@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 class CustomPagination(PageNumberPagination):
-  page_size = 20
+  page_size = 1000
 
 # Question List & Create
 class QuestionAPIView(APIView):

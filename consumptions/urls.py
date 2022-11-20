@@ -9,8 +9,9 @@ urlpatterns = [
   path('food/image/<int:pk>/', views.FoodImageDeleteAPIView.as_view()), # FoodImage delete
   # path('food/view/', views.FoodTypeListAPIView.as_view()), # 식단일기 음식 탭 별로 저장된 것들 가져오는(GET) api (query param : type, date) -> deprecated
   # supplement
-  path('supplement/', views.SupplementCreateAPIView.as_view()), # 영양제 생성(POST)
-  path('supplement/<int:pk>/', views.SupplementUpdateAPIView.as_view()), # 영양제 수정(PATCH), 삭제(DELETE) 
+  path('supplement/', views.SupplementCreateAPIView.as_view()), # 영양제 생성(POST) -> deprecated ?
+  path('supplement/<int:pk>/', views.SupplementUpdateAPIView.as_view()), # 영양제 수정(PATCH), 삭제(DELETE)
+  path('supplement/post/', views.SupplementCreateDBAPIView.as_view()), # new 영양제 생성(POST) api
   # water
   path('water/', views.WaterCreateAPIView.as_view()), # 물 생성(POST)
   path('water/<int:pk>/', views.WaterUpdateAPIView.as_view()), # 물 수정(PATCH)
