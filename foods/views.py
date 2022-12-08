@@ -7,12 +7,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
+# permission
+from rest_framework.permissions import AllowAny
 
 class FoodsView(APIView):
 
+  # permission
+  def get_permissions(self):
+    permission_classes = [AllowAny]
+    return [permission() for permission in permission_classes]
+
   def get(self, request):
     paginator =PageNumberPagination()
-    paginator.page_size = 10000
+    paginator.page_size = 10
     search_query = request.GET.get("search", None)
     search_type = request.GET.get("type", None)
     if search_type == "supplement": # supplement type (서로 다른 DB로 접근)

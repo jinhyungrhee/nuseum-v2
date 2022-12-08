@@ -946,13 +946,16 @@ class AdminDayView(APIView):
 
   def get(self, request):
     author_string = self.request.GET.get('author', None)
+    print(author_string)
+    # if author_string is None:
+    #   data = {
+    #     'error_msg' : '올바른 사용자 코드를 입력하세요.'
+    #   }
+    #   return Response(status=status.HTTP_404_NOT_FOUND, data=data)
     if author_string is None:
-      data = {
-        'error_msg' : '올바른 사용자 코드를 입력하세요.'
-      }
-      return Response(status=status.HTTP_404_NOT_FOUND, data=data)
-    author = User.objects.get(username=author_string)
-    # print(f"AUTHOR : {author}")
+      author = self.request.user
+    else:
+      author = User.objects.get(username=author_string)
 
     date = self.request.GET.get('date', None)
     int_date = convert_to_int_date(date)
@@ -963,6 +966,7 @@ class AdminDayView(APIView):
       return Response(status=status.HTTP_404_NOT_FOUND, data=data)
 
     date = datetime.fromtimestamp(int_date/1000)
+    nutrient = self.request.GET.get('nutrient', None) # nutrient 포함 여부
     # 아침/점심/저녁/간식 영양소
     food_posts = list(FoodPost.objects.filter(author=author, created_at=date).values('id'))
     day_food_data = FoodConsumption.objects.none() # 빈 쿼리셋 생성
@@ -971,10 +975,13 @@ class AdminDayView(APIView):
     # 물 정보 가져오기
     day_water_data = WaterPost.objects.filter(author=author, created_at=date)
     # 영양제 정보 가져오기
-    supplement_posts = SupplementPost.objects.filter(author=author, created_at=date)
-    day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
-    for i in range(len(supplement_posts)):
-      day_supplement_data |= supplement_posts[i].supplementconsumption_set.all()
+    if nutrient == 'yes':
+      supplement_posts = SupplementPost.objects.filter(author=author, created_at=date)
+      day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+      for i in range(len(supplement_posts)):
+        day_supplement_data |= supplement_posts[i].supplementconsumption_set.all()
+    elif nutrient == 'no':
+      day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
 
     reporting_date = count_reporting_date(date, author, "day")
     sum_day_data = nutrient_calculator(day_food_data, day_supplement_data, day_water_data, reporting_date)
@@ -984,8 +991,13 @@ class AdminWeekView(APIView):
 
   def get(self, request):
     author_string = self.request.GET.get('author', None)
-    author = User.objects.get(username=author_string)
+    print(author_string)
+    if author_string is None:
+      author = self.request.user
+    else:
+      author = User.objects.get(username=author_string)
     date = self.request.GET.get('date', None)
+    nutrient = self.request.GET.get('nutrient', None) # nutrient 포함 여부
     today_date = datetime.fromtimestamp(int(date)/1000)
     a_week_ago = datetime.fromtimestamp((int(date) - 518400000)/1000)
     week_food_posts = FoodPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
@@ -993,10 +1005,13 @@ class AdminWeekView(APIView):
     for i in range(len(week_food_posts)):
       week_food_data |= week_food_posts[i].foodconsumption_set.all()
     
-    week_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
-    week_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
-    for i in range(len(week_supplement_posts)):
-      week_supplement_data |= week_supplement_posts[i].supplementconsumption_set.all()
+    if nutrient == 'yes':
+      week_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+      week_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+      for i in range(len(week_supplement_posts)):
+        week_supplement_data |= week_supplement_posts[i].supplementconsumption_set.all()
+    elif nutrient == 'no':
+      week_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
 
     week_water_data = WaterPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
 
@@ -1009,8 +1024,12 @@ class AdminMonthView(APIView):
 
   def get(self, request):
     author_string = self.request.GET.get('author', None)
-    author = User.objects.get(username=author_string)
+    if author_string is None:
+      author = self.request.user
+    else:
+      author = User.objects.get(username=author_string)
     date = self.request.GET.get('date', None)
+    nutrient = self.request.GET.get('nutrient', None) # nutrient 포함 여부
     today_date = datetime.fromtimestamp(int(date)/1000)
     a_week_ago = datetime.fromtimestamp((int(date) - 2592000000)/1000)
     month_food_posts = FoodPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
@@ -1018,10 +1037,13 @@ class AdminMonthView(APIView):
     for i in range(len(month_food_posts)):
       month_food_data |= month_food_posts[i].foodconsumption_set.all()
     
-    month_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
-    month_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
-    for i in range(len(month_supplement_posts)):
-      month_supplement_data |= month_supplement_posts[i].supplementconsumption_set.all()
+    if nutrient == 'yes':
+      month_supplement_posts = SupplementPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
+      month_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
+      for i in range(len(month_supplement_posts)):
+        month_supplement_data |= month_supplement_posts[i].supplementconsumption_set.all()
+    elif nutrient == 'no':
+      month_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
 
     month_water_data = WaterPost.objects.filter(author=author, created_at__lte=today_date, created_at__gte=a_week_ago).order_by('created_at')
 
@@ -1096,9 +1118,6 @@ class SupplementCreateDBAPIView(CreateAPIView):
         # 예외처리 : 이상한 값 입력 시 예외처리
         try:
           type = request.data['type']
-          # name = request.data['name']
-          # manufacturer = request.data['manufacturer']
-          # image = request.data['image']
           consumption_list = request.data['consumptions']
           created_at = request.data['created_at']
         except KeyError:
@@ -1114,39 +1133,16 @@ class SupplementCreateDBAPIView(CreateAPIView):
           return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
         date_data = datetime.fromtimestamp(int(created_at)/1000)
-        
-        # base64 -> s3 url (일단 이미지 추출 후 빈 string으로 대체)
-        # base64_list = []
-        # for i in range(len(consumption_list)):
-        #   base64_list.append(consumption_list[i]['image'])
-        #   consumption_list[i]['image'] = ""
-        #   # SupplementConsumptionSerializer(data=consumption_list[i])
 
         data = {
           "type" : type,
           "created_at" : date_data,
-          # "name" : name,
-          # "manufacturer" : manufacturer,
-          # "image" : "",
           "consumptions" : consumption_list,
           "author" : self.request.user.id,
-          # supplement 추가해야하나?
         }
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-        # image_url = create_image_url(image, serializer.data['id'], date_data, self.request.user.username)
-        # serializer.data['image'] = image_url
-        # # base64 -> s3 url
-        # for i in range(len(base64_list)):
-        #   image_id = serializer.data['consumptions'][i]['id']
-        #   if base64_list[i] == "":
-        #     continue
-        #   image_url = create_image_url(base64_list[i], image_id, date_data, self.request.user.username)
-        #   supplement_consumption = SupplementConsumption.objects.get(id=image_id)
-        #   supplement_consumption.image = image_url
-        #   supplement_consumption.save()
-        #   serializer.data['consumptions'][i]['image'] = image_url
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
