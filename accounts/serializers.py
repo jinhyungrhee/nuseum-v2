@@ -20,47 +20,36 @@ from allauth.account.utils import setup_user_email
 from rest_framework import status
 
 class CustomRegisterSerializer(RegisterSerializer):
-
-  # to customize error message
-#   def save(self, request):
-#     adapter = get_adapter()
-#     user = adapter.new_user(request)
-#     print(user)
-#     if User.objects.filter(username=user).exists() == True:
-#         raise serializers.ValidationError(_("이미 존재하는 아이디입니다!")) 
-#     self.cleaned_data = self.get_cleaned_data()
-#     user = adapter.save_user(request, user, self, commit=False)
-#     if "password1" in self.cleaned_data:
-#         try:
-#             adapter.clean_password(self.cleaned_data['password1'], user=user)
-#         except DjangoValidationError as exc:
-#             raise serializers.ValidationError(
-#                 detail=serializers.as_serializer_error(exc)
-#         )
-#     user.save()
-#     self.custom_signup(request, user)
-#     setup_user_email(request, user, [])
-#     return user  
+  gender = serializers.CharField()
+  age = serializers.IntegerField()
 
   def validate_username(self, username):
-        # codes = ['사과', '오이', '호박', '당근' , '시금치', '열무' , '토란', '감자', '브로콜리', '양배추', '비트', '테스트1', '테스트2', '테스트3', '테스트4', '테스트5', 
-        # 'NPP01', 'NPP02', 'NPP03', 'NPP04', 'NPP05', 'NPP06', 'NPP07', 'NPP08', 'NPP09', 'NPP10', 'NPP11', 'NPP12', 'NPP13', 'NPP14', 'NPP15', 'NPP16',
-        # 'NPP17', 'NPP18', 'NPP19', 'NPP20', 'apple', 'cucumber', 'pumpkin', 'carrot', 'spinach', 'radish', 'taro', 'potato', 'broccoli', 'cabbage', 'beetroot']
-        if User.objects.filter(username=username).exists() == True:
-            raise serializers.ValidationError(_("이미 존재하는 아이디입니다!"))
-            # raise serializers.ValidationError(_("이미 존재하는 아이디입니다!"), status.HTTP_406_NOT_ACCEPTABLE)
+        codes = [
+        '사과', '오이', '호박', '당근' , '시금치', '열무' , '토란', '감자', '브로콜리', '양배추', '비트', '테스트1', '테스트2', '테스트3', '테스트4', '테스트5', 
+        'NPP01', 'NPP02', 'NPP03', 'NPP04', 'NPP05', 'NPP06', 'NPP07', 'NPP08', 'NPP09', 'NPP10', 'NPP11', 'NPP12', 'NPP13', 'NPP14', 'NPP15', 'NPP16',
+        'NPP17', 'NPP18', 'NPP19', 'NPP20', 'apple', 'cucumber', 'pumpkin', 'carrot', 'spinach', 'radish', 'taro', 'potato', 'broccoli', 'cabbage', 'beetroot',
+        ]
         username = get_adapter().clean_username(username)
-        # print(username)
-        # print(User.objects.filter(username=username))
-        # print(User.objects.filter(username=username).exists())
-        # if User.objects.filter(username=username).exists() == True:
-        #     raise serializers.ValidationError(_("이미 존재하는 아이디입니다!"))
+        if username not in codes:
+          raise serializers.ValidationError(_("올바른 코드를 입력하세요!"))
         return username
+
+  def custom_signup(self, request, user):
+        # validation
+        print(request.POST)
+        user.gender = request.POST.get("gender")
+        string_age = request.POST.get("age")
+        if string_age == None:
+            user.age = 0
+        else:
+            user.age = abs(int(string_age))
+        user.save()
 
 class UserSerializer(serializers.ModelSerializer):
   class Meta:
     model = User
-    fields = ['id', 'username', 'is_superuser']
+    fields = ['id', 'username', 'is_superuser', 'gender', 'age']
+    # fields = ['id', 'username', 'is_superuser']
 
 class UserListSerializer(serializers.Serializer):
   userList = UserSerializer(many=True)
@@ -101,6 +90,10 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             extra_fields.append('last_name')
         if hasattr(UserModel, 'is_superuser'): # 추가
             extra_fields.append('is_superuser')
+        if hasattr(UserModel, 'gender'): # 추가
+            extra_fields.append('gender')
+        if hasattr(UserModel, 'age'): # 추가
+            extra_fields.append('age')
         model = UserModel
         fields = ('pk', *extra_fields)
         read_only_fields = ('email',)

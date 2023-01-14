@@ -49,6 +49,8 @@ class FoodPostCreateAPIView(ListCreateAPIView):
 
   def list(self, request, queryset, *args, **kwargs):
 
+        # 쿠키에 성별, 나이 내려보냄
+
         if queryset.exists():
           consumption_list = []
           image_list = []
@@ -71,7 +73,10 @@ class FoodPostCreateAPIView(ListCreateAPIView):
           }
         else:
           food_data = []
-        return Response(data=food_data)
+        response = Response(data=food_data)
+        # response.set_cookie(key='gender', value=self.request.user.gender)
+        # response.set_cookie(key='age', value=self.request.user.age)
+        return response
 
   def create(self, request, *args, **kwargs):
         # 예외처리 : 이상한 값 입력 시 예외처리
