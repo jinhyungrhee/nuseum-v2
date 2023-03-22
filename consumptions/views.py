@@ -14,11 +14,12 @@ from accounts.serializers import UserListSerializer
 from collections import defaultdict, OrderedDict
 import copy
 import json
+from django.db.models import Q
 
 MEAL_TYPE_LIST = ['breakfast', 'lunch', 'dinner', 'snack']
 CATEGORY_MAPPER = {'채소':1, '샐러드':1, '나물':1, '과일':2, '과실':2, '두부':3, '콩/두부':3, '두류':3, '두유':3, '메주':3, '된장':3, 
                    '통곡물':4, '버섯':5, '해조류':6, '견과':7, '고기/생선/달걀':8, '육류':8, '난류':8, '수산물':8, '어패류':8, '회류':8, 
-                   '우유':9, '치즈':9, '유제품':9, '발효유':9, '가공유':9, '가공두유':9}
+                   '우유':9, '치즈':9, '유제품':9, '발효유':9, '가공유':9, '가공두유':9, '보충제':0}
 
 # FOOD
 # FOOD(TYPE&DATE) LIST
@@ -984,22 +985,22 @@ class AdminDayView(APIView):
     date = datetime.fromtimestamp(int_date/1000)
     nutrient = self.request.GET.get('nutrient', None) # nutrient 포함 여부
     # 아침/점심/저녁/간식 영양소
-    food_posts = list(FoodPost.objects.filter(author=author, created_at=date).values('id'))
+    #food_posts = list(FoodPost.objects.filter(author=author, created_at=date).values('id')) # 기존
+    # 변경 - Queryset으로 받아오기 ***
+    food_posts = FoodPost.objects.filter(author=author, created_at=date)
     day_food_data = FoodConsumption.objects.none() # 빈 쿼리셋 생성
-    for i in range(len(food_posts)):
-      day_food_data |= FoodConsumption.objects.filter(post=food_posts[i]['id'])
+    if nutrient == 'yes':
+      for i in range(len(food_posts)):
+        #day_food_data |= FoodConsumption.objects.filter(post=food_posts[i]['id']) # 기존
+        day_food_data |= food_posts[i].foodconsumption_set.all()
+    else: # nutrient == 'no'
+      for i in range(len(food_posts)):
+        day_food_data |= food_posts[i].foodconsumption_set.exclude(food__category="보충제")
     # 물 정보 가져오기
     day_water_data = WaterPost.objects.filter(author=author, created_at=date)
-    # 영양제 정보 가져오기
-    if nutrient == 'yes':
-      supplement_posts = SupplementPost.objects.filter(author=author, created_at=date)
-      day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
-      for i in range(len(supplement_posts)):
-        day_supplement_data |= supplement_posts[i].supplementconsumption_set.all()
-    elif nutrient == 'no':
-      day_supplement_data = SupplementConsumption.objects.none() # 빈 쿼리셋 생성
-
     reporting_date = count_reporting_date(date, author, "day")
+    # supplement 테이블 사용 X(deprecated) - 임시
+    day_supplement_data = SupplementConsumption.objects.none() 
     sum_day_data = nutrient_calculator(day_food_data, day_supplement_data, day_water_data, reporting_date)
     return Response(data=sum_day_data)
 
