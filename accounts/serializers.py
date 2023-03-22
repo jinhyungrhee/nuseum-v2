@@ -38,7 +38,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         '''
         return username
   
-  # local
+  # browsable API only
   '''
   def custom_signup(self, request, user):
         # validation
@@ -75,7 +75,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         user.gender = self.cleaned_data.get('gender')
         user.age = self.cleaned_data.get('age')
         user.save()
-        #self.custom_signup(request, user)
+        #self.custom_signup(request, user) # browsable API only
         setup_user_email(request, user, [])
         return user
 
